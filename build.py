@@ -1,4 +1,5 @@
 import os
+import logging
 from pathlib import Path
 
 import geopandas as gpd
@@ -11,7 +12,7 @@ from starplot import geod, warnings
 from starplot.data import Catalog
 from starplot.models.dso import DSO
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 HERE = Path(__file__).resolve().parent
 DATA_PATH = HERE / "data"
@@ -40,6 +41,20 @@ COLUMN_MAP = {
     "Common names": "common_names",
     "Const": "constellation_id",
 }
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+console_handler = logging.StreamHandler()
+file_handler = logging.FileHandler("build.log", mode="a")
+logger.addHandler(console_handler)
+logger.addHandler(file_handler)
+formatter = logging.Formatter(
+    "{asctime} - {levelname} - {message}",
+    style="{",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+console_handler.setFormatter(formatter)
+file_handler.setFormatter(formatter)
 
 warnings.suppress()
 
@@ -277,8 +292,11 @@ def dsos_all():
 
     # gdf.to_file(BUILD_PATH / "ongc2.json", driver="GeoJSON", engine="pyogrio")
 
+    ctr = 0
     for d in gdf.itertuples():
+        ctr += 1
         obj = DSO(
+            pk=ctr,
             ra=d.ra,
             dec=d.dec,
             constellation_id=d.constellation_id,
@@ -299,12 +317,14 @@ def dsos_all():
 
 
 def build():
+    logger.info("Building OpenNGC catalog...")
     output_path = BUILD_PATH / f"ongc.{__version__}.parquet"
     Catalog.build(
         objects=dsos_all(),
         path=output_path,
         chunk_size=100_000,
         columns=[
+            "pk",
             "name",
             "ra",
             "dec",
@@ -330,7 +350,7 @@ def build():
 
     all_dsos = [d for d in DSO.all(catalog=ongc)]
 
-    print(f"Total objects: {len(all_dsos)}")
+    logger.info(f"Total objects: {len(all_dsos):,}")
     assert len(all_dsos) == 14_036
 
     m42 = DSO.get(m="42", catalog=ongc)
@@ -338,7 +358,7 @@ def build():
     assert m42.ra == 83.8187
     assert m42.dec == -5.3897
 
-    print("Checks passed!")
+    logger.info("Checks passed!")
 
 
 if __name__ == "__main__":
