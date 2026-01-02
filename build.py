@@ -12,7 +12,7 @@ from starplot import geod, warnings
 from starplot.data import Catalog
 from starplot.models.dso import DSO
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 HERE = Path(__file__).resolve().parent
 DATA_PATH = HERE / "data"
