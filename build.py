@@ -319,9 +319,9 @@ def dsos_all():
 def build():
     logger.info("Building OpenNGC catalog...")
     output_path = BUILD_PATH / f"ongc.{__version__}.parquet"
-    Catalog.build(
+    ongc = Catalog(path=output_path)
+    ongc.build(
         objects=dsos_all(),
-        path=output_path,
         chunk_size=100_000,
         columns=[
             "pk",
@@ -345,8 +345,6 @@ def build():
         compression="snappy",
         row_group_size=100_000,
     )
-
-    ongc = Catalog(path=output_path)
 
     all_dsos = [d for d in DSO.all(catalog=ongc)]
 
