@@ -99,8 +99,6 @@ def read_csv():
     # drop non-existent objects
     df = df[df["Type"] != "NonEx"].copy()
 
-    # maj*2, min*2, -angle
-
     df["ra_degrees"] = df.apply(parse_ra, axis=1)
     df["dec_degrees"] = df.apply(parse_dec, axis=1)
     df["M"] = df.apply(parse_m, axis=1)

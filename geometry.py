@@ -16,9 +16,6 @@ def distance_m(distance_degrees: float, lat: float = 0, lon: float = 0):
 
 
 def away_from_poles(dec):
-    # for some reason cartopy does not like plotting things EXACTLY at the poles
-    # so, this is a little hack to avoid the bug (or maybe a misconception?) by
-    # plotting a tiny bit away from the pole
     if dec == 90:
         dec -= 0.00000001
     if dec == -90:
