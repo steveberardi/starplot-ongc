@@ -8,18 +8,19 @@ import numpy as np
 
 from shapely.geometry import Polygon, MultiPolygon, Point
 
-from starplot import geod, warnings
+import geometry
+from starplot import warnings
+from starplot.constants import PROJ_R
 from starplot.data import Catalog
 from starplot.models.dso import DSO
 
-__version__ = "0.1.2"
+__version__ = "0.2.0"
 
 HERE = Path(__file__).resolve().parent
 DATA_PATH = HERE / "data"
 BUILD_PATH = HERE / "build"
 
-
-CRS = "+ellps=sphere +f=0 +proj=latlong +axis=wnu +a=6378137 +no_defs"
+CRS = f"+ellps=sphere +f=0 +proj=latlong +axis=wnu +a={PROJ_R} +no_defs"
 IGNORE_OUTLINES = [
     "IC0424",  # seems too big?
 ]
@@ -95,6 +96,9 @@ def read_csv():
     )
     df = pd.concat([df, df_addendum])
 
+    # drop non-existent objects
+    df = df[df["Type"] != "NonEx"].copy()
+
     df["ra_degrees"] = df.apply(parse_ra, axis=1)
     df["dec_degrees"] = df.apply(parse_dec, axis=1)
     df["M"] = df.apply(parse_m, axis=1)
@@ -102,11 +106,13 @@ def read_csv():
     df["NGC"] = df.apply(parse_ngc, axis=1)
     df["Const"] = df.apply(lambda d: str(d.Const).lower(), axis=1)
 
-    df.drop("RA", axis=1, inplace=True)
-    df.drop("Dec", axis=1, inplace=True)
+    # drop raw RA/DEC values - they were parsed above
+    df = df.drop(columns=["RA", "Dec"])
 
     df = df.rename(columns=COLUMN_MAP)
     df = df.rename(columns={"ra_degrees": "ra", "dec_degrees": "dec"})
+
+    df["angle"] = df.apply(lambda row: row.angle * -1, axis=1)
 
     gdf = gpd.GeoDataFrame(
         df,
@@ -155,10 +161,6 @@ def parse_ngc(row):
 
 def parse_ra(row):
     """Parses RA from ONGC CSV from HH:MM:SS to 0...360 degree float"""
-    if row.Type == "NonEx":
-        # print(f"Non Existent object, ignoring... {row.Name}")
-        return
-
     ra = row.RA
     h, m, s = ra.split(":")
     return round(15 * (float(h) + float(m) / 60 + float(s) / 3600), 4)
@@ -166,10 +168,6 @@ def parse_ra(row):
 
 def parse_dec(row):
     """Parses DEC from ONGC CSV from HH:MM:SS to -90...90 degree float"""
-    if row.Type == "NonEx":
-        # print(f"Non Existent object, ignoring... {row.Name}")
-        return
-
     dec = row.Dec
     if dec[0] == "-":
         mx = -1
@@ -179,7 +177,7 @@ def parse_dec(row):
     return round(mx * (float(h) + float(m) / 60 + float(s) / 3600), 4)
 
 
-def create_ellipse(d):
+def create_ellipse(d, num_pts=360):
     maj_ax, min_ax, angle = d.maj_ax, d.min_ax, d.angle
 
     if str(d.geometry.geom_type) in ["Polygon", "MultiPolygon"]:
@@ -198,13 +196,14 @@ def create_ellipse(d):
     else:
         min_ax_degrees = (min_ax / 60) / 2
 
-    points = geod.ellipse(
+    polygon = geometry.ellipse(
         (d.ra, d.dec),
-        min_ax_degrees * 2,
-        maj_ax_degrees * 2,
-        angle,
-        num_pts=100,
+        height_degrees=maj_ax_degrees * 2,
+        width_degrees=min_ax_degrees * 2,
+        angle=angle,
+        num_pts=num_pts,
     )
+    points = list(zip(*polygon.exterior.coords.xy))
 
     def fix_ra(r):
         if r < 0:
@@ -289,8 +288,6 @@ def dsos_all():
     gdf["size"] = gdf.apply(_size, axis=1)
     gdf["geometry"] = gdf.apply(create_ellipse, axis=1)
     gdf["magnitude"] = gdf.apply(lambda d: d.mag_v or d.mag_b or None, axis=1)
-
-    # gdf.to_file(BUILD_PATH / "ongc2.json", driver="GeoJSON", engine="pyogrio")
 
     ctr = 0
     for d in gdf.itertuples():

@@ -1,9 +1,8 @@
 PYTHONPATH=./src/
-PYTHON=./venv/bin/python
 
 REPO_NAME=starplot-ongc
 
-VERSION=$(shell ./venv/bin/python -c 'from build import __version__; print(__version__)')
+VERSION=$(shell uv run python -c 'from build import __version__; print(__version__)')
 VERSION_CHECK=$(shell gh release list \
 		-R steveberardi/$(REPO_NAME) \
 		--limit 1000 \
@@ -14,29 +13,29 @@ VERSION_CHECK=$(shell gh release list \
 export STARPLOT_DATA_PATH=./data/
 
 # Development ------------------------------------------
-install: venv/bin/activate
+install:
+	[ -d ".venv" ] || uv venv && uv pip install -r requirements.txt
 
-format: venv/bin/activate
-	@$(PYTHON) -m ruff format build.py $(ARGS)
-	@$(PYTHON) -m ruff check build.py --fix $(ARGS)
+format:
+	uv run ruff format build.py $(ARGS)
+	uv run ruff check build.py --fix $(ARGS)
 
-venv/bin/activate: requirements.txt
-	python -m venv venv
-	./venv/bin/pip install -r requirements.txt
-
-shell: venv/bin/activate
-	$(PYTHON)
+shell:
+	uv run python
 
 clean:
 	rm -rf __pycache__
-	rm -rf venv
+	rm -rf .venv
 	rm -rf build
 
-build: venv/bin/activate
+build:
 	rm -rf build
 	rm -f build.log
 	@mkdir -p build
-	$(PYTHON) build.py
+	uv run build.py
+
+plots:
+	uv run python plots.py
 
 # Releases ------------------------------------------
 release-check:
@@ -55,8 +54,8 @@ release: release-check
 		--title "v$(VERSION)" \
 		-R steveberardi/$(REPO_NAME)
 
-version: venv/bin/activate
+version:
 	@echo $(VERSION)
 
 
-.PHONY: clean test release release-check build
+.PHONY: clean test release release-check build plots
