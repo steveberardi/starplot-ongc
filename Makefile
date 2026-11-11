@@ -34,6 +34,9 @@ build:
 	@mkdir -p build
 	uv run build.py
 
+plots:
+	uv run python plots.py
+
 # Releases ------------------------------------------
 release-check:
 	@CHECK="$(VERSION_CHECK)";  \
@@ -55,4 +58,4 @@ version:
 	@echo $(VERSION)
 
 
-.PHONY: clean test release release-check build
+.PHONY: clean test release release-check build plots

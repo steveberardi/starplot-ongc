@@ -99,6 +99,8 @@ def read_csv():
     # drop non-existent objects
     df = df[df["Type"] != "NonEx"].copy()
 
+    # maj*2, min*2, -angle
+    
     df["ra_degrees"] = df.apply(parse_ra, axis=1)
     df["dec_degrees"] = df.apply(parse_dec, axis=1)
     df["M"] = df.apply(parse_m, axis=1)
@@ -111,6 +113,8 @@ def read_csv():
 
     df = df.rename(columns=COLUMN_MAP)
     df = df.rename(columns={"ra_degrees": "ra", "dec_degrees": "dec"})
+
+    df["angle"] = df.apply(lambda row: row.angle * -1, axis=1)
 
     gdf = gpd.GeoDataFrame(
         df,
@@ -196,9 +200,9 @@ def create_ellipse(d, num_pts=360):
 
     polygon = geometry.ellipse(
         (d.ra, d.dec),
-        min_ax_degrees * 2,
-        maj_ax_degrees * 2,
-        angle,
+        height_degrees=maj_ax_degrees * 2,
+        width_degrees=min_ax_degrees * 2,
+        angle=angle,
         num_pts=num_pts,
     )
     points = list(zip(*polygon.exterior.coords.xy))
