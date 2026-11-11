@@ -1,2 +1,2 @@
-starplot==0.18.1
+starplot==0.22.0
 ruff==0.14.10

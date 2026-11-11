@@ -8,18 +8,17 @@ import numpy as np
 
 from shapely.geometry import Polygon, MultiPolygon, Point
 
-from starplot import geod, warnings
+from starplot import geod, warnings, constants
 from starplot.data import Catalog
 from starplot.models.dso import DSO
 
-__version__ = "0.1.2"
+__version__ = "0.2.0"
 
 HERE = Path(__file__).resolve().parent
 DATA_PATH = HERE / "data"
 BUILD_PATH = HERE / "build"
 
-
-CRS = "+ellps=sphere +f=0 +proj=latlong +axis=wnu +a=6378137 +no_defs"
+CRS = f"+ellps=sphere +f=0 +proj=latlong +axis=wnu +a={constants.PROJ_R} +no_defs"
 IGNORE_OUTLINES = [
     "IC0424",  # seems too big?
 ]
