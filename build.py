@@ -8,7 +8,9 @@ import numpy as np
 
 from shapely.geometry import Polygon, MultiPolygon, Point
 
-from starplot import geod, warnings, constants
+import geometry
+from starplot import warnings
+from starplot.constants import PROJ_R
 from starplot.data import Catalog
 from starplot.models.dso import DSO
 
@@ -18,7 +20,7 @@ HERE = Path(__file__).resolve().parent
 DATA_PATH = HERE / "data"
 BUILD_PATH = HERE / "build"
 
-CRS = f"+ellps=sphere +f=0 +proj=latlong +axis=wnu +a={constants.PROJ_R} +no_defs"
+CRS = f"+ellps=sphere +f=0 +proj=latlong +axis=wnu +a={PROJ_R} +no_defs"
 IGNORE_OUTLINES = [
     "IC0424",  # seems too big?
 ]
@@ -178,7 +180,7 @@ def parse_dec(row):
     return round(mx * (float(h) + float(m) / 60 + float(s) / 3600), 4)
 
 
-def create_ellipse(d):
+def create_ellipse(d, num_pts=360):
     maj_ax, min_ax, angle = d.maj_ax, d.min_ax, d.angle
 
     if str(d.geometry.geom_type) in ["Polygon", "MultiPolygon"]:
@@ -197,13 +199,14 @@ def create_ellipse(d):
     else:
         min_ax_degrees = (min_ax / 60) / 2
 
-    points = geod.ellipse(
+    polygon = geometry.ellipse(
         (d.ra, d.dec),
         min_ax_degrees * 2,
         maj_ax_degrees * 2,
         angle,
-        num_pts=100,
+        num_pts=num_pts,
     )
+    points = list(zip(*polygon.exterior.coords.xy))
 
     def fix_ra(r):
         if r < 0:
