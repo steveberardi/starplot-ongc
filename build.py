@@ -96,6 +96,9 @@ def read_csv():
     )
     df = pd.concat([df, df_addendum])
 
+    # drop non-existent objects
+    df = df[df["Type"] != "NonEx"].copy()
+
     df["ra_degrees"] = df.apply(parse_ra, axis=1)
     df["dec_degrees"] = df.apply(parse_dec, axis=1)
     df["M"] = df.apply(parse_m, axis=1)
@@ -103,8 +106,8 @@ def read_csv():
     df["NGC"] = df.apply(parse_ngc, axis=1)
     df["Const"] = df.apply(lambda d: str(d.Const).lower(), axis=1)
 
-    df.drop("RA", axis=1, inplace=True)
-    df.drop("Dec", axis=1, inplace=True)
+    # drop raw RA/DEC values - they were parsed above
+    df = df.drop(columns=["RA", "Dec"])
 
     df = df.rename(columns=COLUMN_MAP)
     df = df.rename(columns={"ra_degrees": "ra", "dec_degrees": "dec"})
@@ -156,10 +159,6 @@ def parse_ngc(row):
 
 def parse_ra(row):
     """Parses RA from ONGC CSV from HH:MM:SS to 0...360 degree float"""
-    if row.Type == "NonEx":
-        # print(f"Non Existent object, ignoring... {row.Name}")
-        return
-
     ra = row.RA
     h, m, s = ra.split(":")
     return round(15 * (float(h) + float(m) / 60 + float(s) / 3600), 4)
@@ -167,10 +166,6 @@ def parse_ra(row):
 
 def parse_dec(row):
     """Parses DEC from ONGC CSV from HH:MM:SS to -90...90 degree float"""
-    if row.Type == "NonEx":
-        # print(f"Non Existent object, ignoring... {row.Name}")
-        return
-
     dec = row.Dec
     if dec[0] == "-":
         mx = -1
@@ -291,8 +286,6 @@ def dsos_all():
     gdf["size"] = gdf.apply(_size, axis=1)
     gdf["geometry"] = gdf.apply(create_ellipse, axis=1)
     gdf["magnitude"] = gdf.apply(lambda d: d.mag_v or d.mag_b or None, axis=1)
-
-    # gdf.to_file(BUILD_PATH / "ongc2.json", driver="GeoJSON", engine="pyogrio")
 
     ctr = 0
     for d in gdf.itertuples():
